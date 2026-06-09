@@ -1,0 +1,233 @@
+================================================================
+GUIDE DE SIMULATION CODESYS — AS/RS QUADRA 10
+Équivalent de la Watch Table TIA Portal (Watch_ASRS_Simulation.xml)
+PFE DIAW Birane — MENARA PREFA 2026
+================================================================
+
+PRÉREQUIS AVANT SIMULATION
+──────────────────────────
+1. Installer CODESYS IDE 3.5 SP22 (codesys.com)
+2. Installer CODESYS Control Win V3 SL (SoftPLC Windows)
+3. Créer projet → Standard Project → CODESYS Control Win V3
+4. Importer les fichiers .st dans cet ordre :
+   00_DUT → 01_GVL_IO → 02_GVL_SIG → 03_GVL_MOULES → 04_GVL_SEQ
+   → 05_GVL_CFG → FBs (06 à 16) → PRG_STARTUP → PRG_MAIN (18)
+5. Task Manager : PRG_STARTUP = "Once" | PLC_PRG = "Cyclic 10ms"
+6. Build → Download → Login
+
+================================================================
+SÉQUENCE DE SIMULATION COMPLÈTE (Cycle Changement Moule)
+================================================================
+
+GROUPE 1 — INITIALISATION SÉCURITÉ
+──────────────────────────────────
+Variable                    Valeur    Action
+GVL_IO.AU_ACTIF             FALSE     Arrêt urgence inactif
+GVL_IO.ZONE_LIBRE_BTN       TRUE      Zone déclarée libre
+GVL_IO.CAPTEUR_ZONE_OCCUPEE FALSE     Personne dans la zone
+GVL_IO.MODE_AUTO            TRUE      Mode automatique
+
+→ Vérifier : GVL_SIG.SECURITES_OK = TRUE
+             instG1.Step = 1
+
+GROUPE 2 — LANCEMENT HOMING
+─────────────────────────────
+Variable                        Valeur
+GVL_IO.CMD_HOMING_MANUEL        TRUE    → G0 passe en Step 3
+
+Simuler séquence homing (forcer capteurs au fil de G2) :
+
+Step G2=1 (Z_TRANSPORT) :
+  → GVL_IO.CAPTEUR_Z_TRANSPORT = TRUE   (Z monté)
+  → G2 passe Step 2
+
+Step G2=2 (SAT_RET) :
+  → GVL_IO.CAPTEUR_SAT_RETRACTE = TRUE  (satellite rétracté)
+  → G2 passe Step 3
+
+Step G2=3 (HOMING X→P0) :
+  → GVL_IO.POS_P0 = TRUE                (chariot en P0)
+  → G2 passe Step 4
+
+Step G2=4 (ROT_NEUTRE) :
+  → GVL_IO.CAPTEUR_ROT_NEUTRE = TRUE    (rotation neutre)
+  → G2 passe Step 5
+
+Step G2=5 (PARKING→P6) :
+  → GVL_IO.POS_P6 = TRUE                (chariot en garage)
+  → G2 passe Step 6 → HOMING OK
+
+→ Vérifier : GVL_SIG.G2_HOMING_OK = TRUE
+             GVL_SEQ.HOMING_OK = TRUE
+             GVL_SIG.VYT_INIT_OK = TRUE
+             instG0.Step = 4 (EN_ATTENTE)
+
+GROUPE 3 — LANCEMENT CYCLE CHANGEMENT MOULE
+────────────────────────────────────────────
+Variable                Valeur  Commentaire
+GVL_IO.MOULE_DEMANDE_HMI  2    Demander moule IFRANE (ID=2)
+GVL_IO.CMD_CM           TRUE    Déclencher le cycle
+
+→ Vérifier : GVL_SIG.CYCLE_CM_AUTORISE = TRUE
+             GVL_SIG.G3_REQ = TRUE
+             instG0.Step = 5
+             instG3.Step = 1..2..3
+
+GROUPE 4 — PHASE ARRÊT PRESSE (G9)
+────────────────────────────────────
+Quand instG9.Step = 2 (attente presse arrêtée) :
+  → GVL_IO.PRESSE_ARRETEE = TRUE
+
+Quand instG9.Step = 4 (attente pilon haut) :
+  → GVL_IO.PILON_HAUT_OK = TRUE
+  → Vérifier GVL_SIG.G9_ARRETEE_OK = TRUE
+
+Quand instG9.Step = 6 (attente débridage) :
+  → GVL_IO.MOULE_DEBRIDE = TRUE
+  → Vérifier GVL_SIG.G9_DEBRIDE_OK = TRUE
+
+GROUPE 5 — DIVERGENCE ET#1 (G10 retrait ‖ G4→P0)
+───────────────────────────────────────────────────
+G10 retrait introducteur :
+  → GVL_IO.INTRODUCTEUR_A_ZPM = TRUE    (intro revenu à ZPM)
+  → GVL_SIG.G10_A_ZPM = TRUE
+
+G4 déplacement→P0 :
+  → GVL_IO.POS_P0 = TRUE                (chariot à P0)
+  → GVL_SIG.G4_DONE = TRUE (auto)
+
+GROUPE 6 — TRANSFERT MOULE (Steps 15-25)
+──────────────────────────────────────────
+Step 15 : vérif moule sur intro
+  → GVL_IO.MOULE_SUR_INTRO = TRUE
+
+Step 19 : G5→Z_ZPM
+  → GVL_IO.CAPTEUR_Z_ZPM = TRUE
+
+Step 21 : G7→EXT
+  → GVL_IO.CAPTEUR_SAT_ETENDU = TRUE
+
+Step 23 : G5→Z_TRANSPORT + vérif charge
+  → GVL_IO.CAPTEUR_Z_TRANSPORT = TRUE
+  → GVL_IO.CAPTEUR_CHARGE_CHARIOT = TRUE   (moule sur fourches)
+
+Step 25 : G7→RET
+  → GVL_IO.CAPTEUR_SAT_RETRACTE = TRUE
+
+GROUPE 7 — DIVERGENCE ET#2 Branche A (Stockage)
+──────────────────────────────────────────────────
+G4→CH dépôt, G6→SUD, G7→EXT, G5→NV_DEPOT, G7→RET
+Forcer capteurs au fur et à mesure selon étape active :
+  → GVL_IO.CAPTEUR_ROT_SUD = TRUE       (rotation SUD)
+  → GVL_IO.CAPTEUR_SAT_ETENDU = TRUE    (ext)
+  → GVL_IO.CAPTEUR_Z_NIVEAU1 ou NIVEAU2 = TRUE
+  → GVL_IO.CAPTEUR_SAT_RETRACTE = TRUE
+  → Vérifier GVL_SIG.CAPTEUR_PRES_CH[CH,NV] = TRUE (présence en chambre)
+
+Branche B (Nettoyage) :
+  → GVL_IO.ZONE_LIBRE_BTN = TRUE        (déjà TRUE)
+  → GVL_IO.CAPTEUR_ZONE_OCCUPEE = FALSE (déjà FALSE)
+  → GVL_SIG.ZONE_CONFIRMEE = TRUE → Branche B Done automatique
+
+GROUPE 8 — RFID DOUBLE VÉRIFICATION
+──────────────────────────────────────
+RFID check 1 (SubA=15) :
+  → GVL_IO.RFID_LECTURE_OK = TRUE
+  → GVL_IO.RFID_ID_LU = 2         (ID moule IFRANE)
+
+RFID check 2 (SubA=27 à P0) :
+  → GVL_IO.RFID_LECTURE_OK = TRUE
+  → GVL_IO.RFID_ID_LU = 2         (confirmation avant presse)
+
+GROUPE 9 — DÉPÔT NOUVEAU MOULE + BRIDAGE
+──────────────────────────────────────────
+G6→NORD : GVL_IO.CAPTEUR_ROT_NORD = TRUE
+G7→EXT  : GVL_IO.CAPTEUR_SAT_ETENDU = TRUE
+G5→ZPM  : GVL_IO.CAPTEUR_Z_ZPM = TRUE
+G7→RET  : GVL_IO.CAPTEUR_SAT_RETRACTE = TRUE
+          GVL_IO.MOULE_SUR_INTRO = TRUE
+
+G10 entrée presse :
+  → GVL_IO.PILON_HAUT_OK = TRUE
+  → GVL_IO.INTRODUCTEUR_EN_PRESSE = TRUE
+
+G9 bridage (Step 9) :
+  → GVL_IO.PILON_BAS_OK = TRUE
+  → GVL_IO.MOULE_SUR_INTRO = TRUE
+
+G9 bridage (Step 11) :
+  → GVL_IO.MOULE_BRIDE = TRUE
+
+G10 retour ZPM :
+  → GVL_IO.INTRODUCTEUR_A_ZPM = TRUE
+  → GVL_IO.INTRO_VIDE = TRUE
+
+GROUPE 10 — DIVERGENCE ET#3 + FIN
+────────────────────────────────────
+G9 autorisation :
+  → GVL_IO.INTRO_VIDE = TRUE
+  → GVL_IO.INTRODUCTEUR_A_ZPM = TRUE
+  → GVL_IO.CMD_AUTORISE_DEMARRAGE sort = TRUE
+
+G4→P6 garage :
+  → GVL_IO.POS_P6 = TRUE
+
+→ Vérifier FIN :
+  GVL_SIG.G3_FIN_CM = TRUE
+  GVL_SEQ.CYCLE_EN_COURS = FALSE
+  GVL_SEQ.NB_CYCLES_TOTAL = 1
+  GVL_MOULES.MOULE_EN_PRESSE = 2 (IFRANE)
+  instG0.Step = 4 (EN_ATTENTE)
+
+================================================================
+VARIABLES DE SURVEILLANCE (Watch Window CODESYS)
+================================================================
+
+Copier-coller dans la fenêtre Watch de CODESYS :
+
+ÉTAT SYSTÈME :
+GVL_SIG.SECURITES_OK
+GVL_SIG.ZONE_CONFIRMEE
+GVL_SIG.CYCLE_CM_AUTORISE
+GVL_SEQ.HOMING_OK
+GVL_SEQ.DEFAUT_ACTIF
+GVL_SEQ.CODE_DEFAUT
+GVL_SEQ.CYCLE_INTERROMPU
+GVL_SEQ.MOULE_EN_TRANSIT
+GVL_SEQ.NB_CYCLES_TOTAL
+
+ÉTAPES GRAFCET :
+PLC_PRG.instG0.Step
+PLC_PRG.instG1.Step
+PLC_PRG.instG2.Step
+PLC_PRG.instG3.Step
+PLC_PRG.instG3.SubA
+PLC_PRG.instG3.SubB
+PLC_PRG.instG4.Step
+PLC_PRG.instG5.Step
+PLC_PRG.instG6.Step
+PLC_PRG.instG7.Step
+PLC_PRG.instG8.Step
+PLC_PRG.instG9.Step
+PLC_PRG.instG10.Step
+
+STOCK MOULES :
+GVL_MOULES.MOULE_EN_PRESSE
+GVL_MOULES.MOULE_DEMANDE
+GVL_MOULES.NB_EMPLACEMENTS_LIBRES
+GVL_MOULES.CIBLE_DEPOT_CH
+GVL_MOULES.CIBLE_DEPOT_NV
+GVL_MOULES.CIBLE_PRISE_CH
+GVL_MOULES.CIBLE_PRISE_NV
+
+================================================================
+NOTES IMPORTANTES CODESYS
+================================================================
+
+1. CODESYS Control Win V3 : démarrer via Start Menu → CODESYS → SysTrayIcon
+2. Communication : créer Gateway → localhost → ScanDevices
+3. Forcer variables : online → Write Value ou Toggle (F7)
+4. Surveillance : View → Watch → ajouter les variables ci-dessus
+5. Visualisation WebVisu : http://localhost:8080/webvisu.htm
+   (après activation dans CODESYS Control Win V3 settings)
+================================================================

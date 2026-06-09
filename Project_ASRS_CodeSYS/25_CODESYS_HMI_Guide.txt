@@ -1,0 +1,518 @@
+================================================================
+GUIDE CRÉATION IHM — CODESYS Visualization
+AS/RS QUADRA 10 — MENARA PRÉFA
+================================================================
+Résolution cible : 1280 × 800 px
+Format position : (Gauche, Haut, Droite, Bas) en pixels
+
+ÉTAPES PRÉLIMINAIRES
+────────────────────
+1. Dans CODESYS, importer dans cet ordre :
+   - 00_DUT_UDT_MOULE.st        → DUT
+   - 20_GVL_HMI.st              → GVL (nom : "GVL_HMI")
+   - 21_FC_MouleIDToStr.st      → Function
+   - 22_FC_EtapeG3ToStr.st      → Function
+   - 23_FB_HMI_Controller.st    → Function Block
+   - 24_FB_FaultInjector.st     → Function Block
+
+2. Modifier PRG_MAIN (voir section PRG_MAIN en bas de ce guide).
+
+3. Créer 4 objets Visualization (clic droit sur l'application → Add Object → Visualization) :
+   - VIS_PRINCIPALE
+   - VIS_COMMANDES
+   - VIS_ALARMES
+   - VIS_MODES_DEGRADES
+
+4. Dans chaque Visualization, aller dans Visualization Properties :
+   - Taille : 1280 × 800
+   - Background color : RGB(26, 26, 46)   → #1A1A2E (fond bleu nuit industriel)
+
+5. Activer WebVisu : clic droit sur le Device → Add Object → WebVisu
+   Port par défaut : 8080
+   URL d'accès : http://localhost:8080/webvisu.htm
+
+6. Activer TargetVisu si écran local : clic droit Device → Add Object → TargetVisu
+
+================================================================
+ÉLÉMENTS COMMUNS (à copier sur les 4 écrans)
+================================================================
+
+[ BANDE HEADER ]
+Type       : Rectangle
+Position   : (0, 0, 1280, 55)
+Fill       : #1B3A5C (bleu marine)
+Border     : Aucune
+
+Type       : Text
+Position   : (0, 0, 900, 55)
+Texte      : "AS/RS QUADRA 10  |  MENARA PRÉFA"
+Font       : Arial 20pt Bold
+Color      : Blanc (#FFFFFF)
+Align      : Centre vertical, gauche horizontal (padding 20px)
+
+[ BADGE MODE SYSTÈME ]
+Type       : Rectangle
+Position   : (950, 8, 1270, 47)
+Fill       : Variable dynamique → GVL_HMI.HMI_COL_MODE
+Border     : Arrondi 4px, couleur #FFFFFF
+
+Type       : Text Field
+Position   : (950, 8, 1270, 47)
+Variable   : GVL_HMI.HMI_MODE_TXT
+Font       : Arial 14pt Bold
+Color      : Blanc
+Align      : Centré
+
+[ BARRE NAVIGATION ] (y=55 à y=100)
+4 boutons côte à côte, chacun 320px de large, hauteur 45px :
+
+Bouton 1 — VUE PRINCIPALE
+  Position  : (0, 55, 320, 100)
+  Texte     : "VUE PRINCIPALE"
+  Action    : Change Visualization → VIS_PRINCIPALE
+  Fill      : #2C5F8A
+  Font      : Arial 12pt Bold, blanc
+
+Bouton 2 — COMMANDES
+  Position  : (320, 55, 640, 100)
+  Texte     : "COMMANDES CYCLE"
+  Action    : Change Visualization → VIS_COMMANDES
+  Fill      : #2C5F8A
+
+Bouton 3 — ALARMES
+  Position  : (640, 55, 960, 100)
+  Texte     : "ALARMES"
+  Action    : Change Visualization → VIS_ALARMES
+  Fill      : Variable dynamique : si GVL_HMI.HMI_ALARME_ACTIVE → #CC0000 sinon #2C5F8A
+
+Bouton 4 — MODES DÉGRADÉS
+  Position  : (960, 55, 1280, 100)
+  Texte     : "MODES DÉGRADÉS"
+  Action    : Change Visualization → VIS_MODES_DEGRADES
+  Fill      : #2C5F8A
+
+Séparateur horizontal :
+  Type      : Line
+  Position  : (0, 100, 1280, 100)
+  Color     : #4A90D9, épaisseur 2px
+
+================================================================
+ÉCRAN 1 — VIS_PRINCIPALE
+================================================================
+Zone de travail : y=100 à y=800
+
+┌──────────────────────────────────────────────────────────┐
+│  PANNEAU GAUCHE (0,100,420,800) — Stock + Presse         │
+├──────────────────────────────────────────────────────────┤
+│  PANNEAU DROIT  (420,100,1280,800) — GRAFCETs + Log      │
+└──────────────────────────────────────────────────────────┘
+
+── PANNEAU GAUCHE ────────────────────────────────────────
+
+[ Titre ]
+  Rectangle   : (10, 110, 410, 145)  Fill=#0F3460
+  Text        : "STOCK — RACK AS/RS"  Font=14pt Bold Blanc
+
+[ Grille stock 5 chambres × 2 niveaux ]
+Chaque cellule : 95px × 55px, disposition :
+  Colonnes  : N1 (gauche) et N2 (droite)
+  Lignes    : CH1 à CH5
+
+Coordonnées de départ : (10, 155)
+Espacement : ligne +60px, colonne +100px
+
+Pour CH=1, N=1 : (10,155,100,205)
+Pour CH=1, N=2 : (110,155,200,205)
+...
+Pour CH=5, N=1 : (10,395,100,445)
+Pour CH=5, N=2 : (110,395,200,445)
+
+Étiquettes fixes (hors cellules) :
+  "N1" à (15,145,90,158) blanc 10pt
+  "N2" à (115,145,190,158) blanc 10pt
+  "CH1" à (1,160,8,200) blanc 10pt (texte vertical ou label)
+  ... CH2 à CH5
+
+Chaque cellule contient :
+  a) Rectangle fond :
+     Fill variable : si GVL_MOULES.CH[i,j].OCCUPE → #005500 sinon #2D2D2D
+     Border : #4A90D9 1px
+  b) LED (Lamp) :
+     Position : (gauche+5, haut+5, gauche+20, haut+20)
+     Variable : GVL_MOULES.CH[i,j].OCCUPE
+     Color ON  : #00FF41  Color OFF : #404040
+  c) Text Field :
+     Position : (gauche+2, haut+25, droite-2, bas-2)
+     Variable : GVL_HMI.HMI_STOCK_TXT[i,j]
+     Font : Arial 9pt Bold, blanc, centré
+  d) Text label fixe CH+N (coin supérieur droit) :
+     "C" + i + "N" + j   Font : Arial 7pt gris clair
+
+[ Étiquettes lignes CH1-CH5 ] — colonne à gauche (x=-15 à 8)
+  Texte rotatif ou simplement à gauche de la grille, 10pt blanc
+
+[ ENCADRÉ MOULE EN PRESSE ]
+  Rectangle   : (10, 470, 410, 560)  Fill=#0F3460  Border=#4A90D9 2px
+  Text fixe   : "MOULE ACTUELLEMENT EN PRESSE"  Font=11pt blanc centré
+  Rectangle   : (10, 565, 410, 630)  Fill=#003300 si moule connu sinon #330000
+  Text Field  : GVL_HMI.HMI_MOULE_PRESSE_TXT
+                Font=24pt Bold  Color=#00FF41  Aligné centré
+
+[ BOUTONS RAPIDES ]
+  Bouton HOMING  : (10,650,200,695)  Fill=#005580
+    Texte : "HOMING"  Action : Toggle GVL_HMI.HMI_BTN_HOMING
+  Bouton AU      : (210,650,400,695)  Fill=#8B0000
+    Texte : "ARRET URGENCE"  Action : Toggle GVL_HMI.HMI_BTN_AU
+    Border : rouge vif 3px si GVL_HMI.HMI_BTN_AU = TRUE
+
+[ COMPTEUR CYCLES ]
+  Rectangle   : (10,710,410,760)  Fill=#1A1A2E  Border=#404040
+  Text fixe   : "Cycles totaux :"  Font=10pt blanc
+  Text Field  : GVL_SEQ.NB_CYCLES_TOTAL  Font=16pt Bold #00FF41  (droite)
+
+── PANNEAU DROIT ─────────────────────────────────────────
+
+[ Titre ]
+  Rectangle   : (430, 110, 1270, 145)  Fill=#0F3460
+  Text        : "ÉTAT GRAFCETS — SIGNAUX ACTIFS"  Font=14pt Bold Blanc
+
+[ Tableau GRAFCETs G0-G10 ] — 11 lignes de 55px
+  Départ : (430, 155)
+
+Ligne type (exemple G0) :
+  LED         : (435, y+10, 460, y+40)
+    Variable  : selon GRAFCET (voir tableau ci-dessous)
+    ON=#00FF41  OFF=#404040
+  Text fixe   : "G0 — Superviseur modes"  Font=11pt blanc  (470, y+8, 850, y+42)
+  Text état   : variable texte           Font=11pt #4A90D9 (855, y+8, 1265, y+42)
+
+Tableau des variables LED et texte état :
+  G0  LED: GVL_SIG.VYT_INIT_OK         État: "Mode: " + GVL_HMI.HMI_MODE_TXT
+  G1  LED: GVL_SIG.SECURITES_OK        État: si TRUE "Sécurités OK" sinon "SECURITES KO"
+  G2  LED: GVL_SIG.G2_HOMING_OK        État: si TRUE "Homing OK" sinon "Homing requis"
+  G3  LED: GVL_SEQ.CYCLE_EN_COURS      État: GVL_HMI.HMI_ETAPE_G3_TXT
+  G4  LED: GVL_SIG.G4_DONE             État: "Axe X — P" + GVL_MOULES.CIBLE_PRISE_CH
+  G5  LED: GVL_SIG.G5_DONE             État: "Axe Z — cible"
+  G6  LED: GVL_SIG.G6_DONE             État: "Rotation"
+  G7  LED: GVL_SIG.G7_DONE             État: "Satellite"
+  G8  LED: GVL_SIG.G8_OK               État: si TRUE "RFID OK" sinon "RFID attente"
+  G9  LED: GVL_SIG.G9_BRIDE_OK         État: si TRUE "Presse bridée" sinon "Presse en cours"
+  G10 LED: GVL_SIG.G10_A_ZPM           État: si TRUE "Intro à ZPM" sinon "Intro en presse"
+
+Astuce couleur LED dynamique :
+  - Configurer une frame avec IF [BOOL]=TRUE → color #00FF41 ELSE → #404040
+  - Dans CODESYS Visualization : clic droit sur LED → Properties → Color → Dynamic Color
+
+[ BARRE D'ÉTAT CYCLE ] (si CYCLE_EN_COURS)
+  Rectangle fond  : (430,770,1270,798)  Fill=#1A1A2E
+  Bar Display     : (430,770,1270,798)
+    Variable      : GVL_HMI.HMI_G3_PCT  (REAL 0.0-100.0)
+    Color rempli  : #00C800
+    Color fond    : #2D2D2D
+    Direction     : gauche→droite
+  Text superposé  : GVL_HMI.HMI_ETAPE_G3_TXT  Font=10pt blanc centré
+
+================================================================
+ÉCRAN 2 — VIS_COMMANDES
+================================================================
+Zone : y=100 à y=800
+
+[ TITRE SECTION ]
+  Rectangle   : (10,110,1270,150)  Fill=#0F3460
+  Text        : "DÉMARRAGE CYCLE CHANGEMENT DE MOULE"  Font=16pt Bold Blanc centré
+
+[ SÉLECTEUR MOULE DEMANDÉ ]
+  Text fixe   : "Moule à installer :"  (10,175,300,215) Font=14pt blanc
+  Combo Box   : (310,175,620,215)
+    Variable  : GVL_HMI.HMI_SEL_MOULE  (INT)
+    Entrées   : 0="Choisir...", 1="MOULE_A", 2="MOULE_B", 3="MOULE_C",
+                4="MOULE_D", 5="MOULE_E"
+    Font      : Arial 14pt
+    Border    : #4A90D9
+
+[ BOUTON CMD_CM ]
+  Rectangle   : (640,170,950,220)
+    Fill variable : si GVL_HMI.HMI_SEL_MOULE_OK ET NOT GVL_SEQ.CYCLE_EN_COURS
+                    → #005500 (vert = actif)
+                    sinon → #333333 (gris = désactivé)
+    Border : #00FF41 2px si actif
+  Text        : "DÉMARRER CYCLE"  Font=16pt Bold Blanc centré
+  Action      : Toggle GVL_HMI.HMI_BTN_CMD_CM
+  (Note : FB_HMI_Controller vérifie HMI_SEL_MOULE_OK avant d'envoyer)
+
+[ MOULE ACTUEL EN PRESSE ]
+  Text fixe   : "En presse actuellement :"  (960,175,1150,215) Font=12pt gris
+  Text Field  : GVL_HMI.HMI_MOULE_PRESSE_TXT  (1155,170,1270,220)
+                Font=18pt Bold #00FF41
+
+[ SÉPARATEUR ]
+  Line : (10,235,1270,235)  Color=#4A90D9 2px
+
+[ BARRE PROGRESSION G3 ]
+  Text fixe   : "Progression cycle G3 :"  (10,250,260,285) Font=12pt blanc
+  Text Field  : GVL_HMI.HMI_G3_ETAPE (avec "/15") (1200,250,1270,285) Font=12pt #4A90D9
+  Bar Display : (10,290,1270,340)
+    Variable  : GVL_HMI.HMI_G3_PCT
+    Color rempli : #00C800   Color fond : #1A3A1A   Border : #00FF41 1px
+  Text Field  : GVL_HMI.HMI_ETAPE_G3_TXT  (10,345,1270,380)
+    Font : Arial 13pt #4A90D9 centré
+
+[ CHRONOMÈTRE ]
+  Text fixe   : "Durée cycle :"     (10,395,200,430) Font=12pt blanc
+  Text Field  : GVL_HMI.HMI_TEMPS_CYCLE (210,390,400,435) Font=22pt Bold #FFD700
+
+[ BOUTON ZONE LIBRE CONFIRMÉE ]
+  Rectangle   : (10,450,450,510)
+    Fill : #004400 si GVL_SIG.VYT_NETTOYAGE (voyant zone active) sinon #1A1A2E
+    Border : si VYT_NETTOYAGE → #FFFF00 3px (signalisation clignotante)
+  Text        : "ZONE LIBRE — CONFIRMER"  Font=16pt Bold Blanc centré
+  Action      : Toggle GVL_HMI.HMI_BTN_ZONE_OK
+  LED         : (420,462,445,495) → GVL_SIG.VYT_NETTOYAGE ON=#FFFF00 OFF=#333333
+
+[ BOUTON HOMING ]
+  Rectangle   : (10,530,220,580)  Fill=#005580  Border=#4A90D9
+  Text        : "HOMING"  Font=14pt Bold Blanc centré
+  Action      : Toggle GVL_HMI.HMI_BTN_HOMING
+  LED         : (185,540,215,572) → GVL_SIG.G2_HOMING_OK
+
+[ BOUTON ARRET URGENCE ]
+  Rectangle   : (230,530,450,580)  Fill=#8B0000  Border=#FF0000 3px
+  Text        : "ARRET URGENCE"  Font=14pt Bold Blanc centré
+  Action      : Toggle GVL_HMI.HMI_BTN_AU
+
+[ PANNEAU ÉTAT RAPIDE (droite) ]
+  Rectangle   : (470,450,1270,600)  Fill=#0A0A1E  Border=#404040
+
+  Signaux clés (2 colonnes × 5 lignes) :
+  Chaque ligne : LED (20×20) + Texte fixe + état bool/texte
+
+  Col 1 (x=490)                      Col 2 (x=870)
+  SECURITES_OK    "Sécurités"        G9_BRIDE_OK     "Bridage"
+  G2_HOMING_OK    "Homing OK"        G9_ARRETEE_OK   "Presse arrêtée"
+  CYCLE_CM_AUTORISE "Cycle autorisé" G8_OK           "RFID OK"
+  VYT_NETTOYAGE   "Nettoyage ZPM"    G10_A_ZPM       "Intro à ZPM"
+  CAPTEUR_CHARGE_CHARIOT "Charge"     MOULE_SUR_INTRO "Moule sur intro"
+
+================================================================
+ÉCRAN 3 — VIS_ALARMES
+================================================================
+Zone : y=100 à y=800
+
+[ TITRE ]
+  Rectangle   : (10,110,1270,150)  Fill=#5C1B1B
+  Text        : "PANNEAU ALARMES — MODES DÉGRADÉS"  Font=16pt Bold Blanc centré
+
+[ BOUTON ACQ ALARMES ]
+  Rectangle   : (1050,115,1265,148)  Fill=#FF6600  Border=#FF9900 2px
+  Text        : "ACQUITTER TOUT"  Font=12pt Bold Blanc centré
+  Action      : Toggle GVL_HMI.HMI_BTN_ACQ
+
+[ INDICATEUR ALARME GLOBALE ]
+  LED (grand) : (10,115,45,148)
+    Variable  : GVL_HMI.HMI_ALARME_ACTIVE
+    ON=#FF3030  OFF=#00C800
+
+Tableau alarmes — 13 lignes à partir de y=160, hauteur 45px chacune
+
+Format de chaque ligne :
+  LED         : 30×30px (coin gauche centré verticalement)
+  Texte code  : 60px largeur  Font=12pt Bold
+  Texte desc  : 680px largeur Font=12pt blanc
+  Texte état  : "ACTIF" ou "OK"  Font=12pt Bold (rouge ou vert)
+
+  LED ON=#FF3030  LED OFF=#00C800
+  Fond ligne ACTIF : #2D0000   Fond ligne OK : #001A00
+
+Ligne 1  y=160  Var=GVL_SIG.ALM_STOCK_PLEIN    Code="D1"  Desc="Stock plein — aucune chambre libre disponible"
+Ligne 2  y=205  Var=GVL_SIG.ALM_RFID            Code="D4"  Desc="RFID défaut — identification échouée (3 tentatives)"
+Ligne 3  y=250  Var=GVL_SIG.ALM_DEBRIDAGE       Code="D??"  Desc="Timeout débridage presse"
+Ligne 4  y=295  Var=GVL_SIG.ALM_BRIDAGE         Code="D??"  Desc="Timeout bridage presse"
+Ligne 5  y=340  Var=GVL_SIG.ALM_PILON           Code="D??"  Desc="Timeout montée/descente pilon"
+Ligne 6  y=385  Var=GVL_SIG.ALM_INTRO           Code="D??"  Desc="Timeout introducteur ZPM"
+Ligne 7  y=430  Var=GVL_SIG.ALM_AXE_X           Code="D3"  Desc="Timeout ou défaut axe X (chariot)"
+Ligne 8  y=475  Var=GVL_SIG.ALM_AXE_Z           Code="D3"  Desc="Timeout ou défaut axe Z (fourches)"
+Ligne 9  y=520  Var=GVL_SIG.ALM_ROTATION        Code="D3"  Desc="Timeout rotation plateau"
+Ligne 10 y=565  Var=GVL_SIG.ALM_SATELLITE       Code="D3"  Desc="Timeout satellite"
+Ligne 11 y=610  Var=GVL_SIG.ALM_COMM_PRESSE     Code="D7"  Desc="Perte Profinet — communication presse interrompue"
+Ligne 12 y=655  Var=GVL_SIG.ALM_ZONE            Code="D6"  Desc="Zone opérateurs occupée — cycle bloqué en S14"
+Ligne 13 y=700  Var=GVL_SIG.ALM_HOMING          Code="D5"  Desc="Homing requis — cycle interrompu détecté"
+
+[ COMPTEUR / RETAIN ]
+  Rectangle   : (10,755,620,795)  Fill=#1A1A2E  Border=#404040
+  Text fixe   : "Cycles totaux : "  (20,760,200,790) Font=12pt blanc
+  Text Field  : GVL_SEQ.NB_CYCLES_TOTAL  (210,758,380,792) Font=18pt Bold #00FF41
+  Text fixe   : "Code défaut : "  (400,760,570,790) Font=12pt blanc
+  Text Field  : GVL_SEQ.CODE_DEFAUT  (580,758,680,792) Font=18pt Bold #FF6600
+
+  Rectangle   : (700,755,1270,795)  Fill=#1A1A2E  Border=#404040
+  Text fixe   : "Cycle interrompu : "  (710,760,900,790) Font=12pt blanc
+  LED grand   : (910,762,945,790)  → GVL_SEQ.CYCLE_INTERROMPU  ON=#FF3030 OFF=#00C800
+  Text fixe   : "Moule en transit : "  (960,760,1140,790) Font=12pt blanc
+  LED grand   : (1150,762,1185,790)  → GVL_SEQ.MOULE_EN_TRANSIT  ON=#FFFF00 OFF=#00C800
+
+================================================================
+ÉCRAN 4 — VIS_MODES_DEGRADES
+================================================================
+Zone : y=100 à y=800
+
+[ TITRE ]
+  Rectangle   : (10,110,1270,150)  Fill=#2D1B00
+  Text        : "SIMULATION MODES DÉGRADÉS — DÉMONSTRATION SOUTENANCE"
+                Font=16pt Bold #FFD700 centré
+
+[ PANNEAU SÉLECTION (gauche) ]
+  Rectangle   : (10,160,620,500)  Fill=#0A0A0A  Border=#4A4A00 2px
+
+  Text fixe   : "SÉLECTIONNER UN SCÉNARIO :"  (20,170,610,200) Font=14pt Bold #FFD700
+
+  Combo Box   : (20,210,610,255)
+    Variable  : GVL_HMI.HMI_FAULT_SEL  (INT)
+    Entrées   :
+      0 = "Choisir un scénario..."
+      1 = "D1 — Stock plein"
+      2 = "D2 — Moule absent du stock"
+      3 = "D3 — Timeout axe X (bloqué)"
+      4 = "D4 — RFID : 3 tentatives KO"
+      5 = "D5 — Cycle interrompu (coupure)"
+      6 = "D6 — Zone opérateurs occupée"
+      7 = "D7 — Perte communication Profinet"
+      8 = "D8 — Coupure secteur en cycle"
+    Font   : Arial 13pt
+    Border : #FFD700 2px
+
+  Text fixe   : "DESCRIPTION DU SCÉNARIO :"  (20,270,610,295) Font=11pt #AAAAAA
+  Text Field  : GVL_HMI.HMI_FAULT_DESC  (20,300,610,450)
+    Font      : Arial 11pt blanc
+    WordWrap  : Oui (si disponible) ou Multi-line Text
+    Border    : #333333 1px
+    Fill fond : #111111
+
+[ BOUTON INJECTER ]
+  Rectangle   : (20,515,300,570)
+    Fill variable : GVL_HMI.HMI_COL_FAULT_BTN
+    Border : si GVL_HMI.HMI_FAULT_ACTIVE → #FF0000 3px sinon #CC0000 2px
+  Text        : si GVL_HMI.HMI_FAULT_ACTIVE → "⚡ DÉFAUT ACTIF" sinon "⚡ INJECTER DÉFAUT"
+                Font=14pt Bold Blanc centré
+  Action      : Toggle GVL_HMI.HMI_BTN_INJECT
+  (Astuce : lier le texte du bouton à une variable HMI_FAULT_BTN_TXT dans GVL_HMI si CODESYS le supporte)
+
+[ BOUTON RESET ]
+  Rectangle   : (320,515,610,570)  Fill=#1A3A1A  Border=#00C800 2px
+  Text        : "RESET COMPLET"  Font=14pt Bold #00FF41 centré
+  Action      : Toggle GVL_HMI.HMI_BTN_FAULT_RESET
+
+[ INDICATEUR DÉFAUT ACTIF ]
+  LED (50×50) : (560,455,610,505)
+    Variable  : GVL_HMI.HMI_FAULT_ACTIVE
+    ON=#FF3030  OFF=#00C800
+
+[ PANNEAU RÉSULTAT (droite) ]
+  Rectangle   : (640,160,1270,500)  Fill=#0A0A0A  Border=#004A00 2px
+
+  Text fixe   : "RÉSULTAT / RÉACTION DU SYSTÈME :"  (650,170,1260,200) Font=14pt Bold #00FF41
+
+  Text Field  : GVL_HMI.HMI_FAULT_RESULT  (650,210,1260,450)
+    Font      : Arial 12pt blanc
+    WordWrap  : Oui
+    Fill fond : #001100
+    Border    : #004A00 1px
+
+[ PANNEAU ÉTAT ALARMES EN TEMPS RÉEL ]
+  Rectangle   : (640,510,1270,750)  Fill=#0A0A1E  Border=#404040
+  Text fixe   : "ÉTAT ALARMES EN COURS :"  (650,520,1100,545) Font=12pt Bold #AAAAAA
+
+  Grille 2 colonnes × 6 lignes à partir de (650, 550), hauteur 30px/ligne :
+
+  Col 1 (x=650-950)              Col 2 (x=960-1260)
+  ALM_STOCK_PLEIN "D1 Stock"     ALM_AXE_X      "D3 Axe X"
+  ALM_RFID        "D4 RFID"      ALM_AXE_Z      "D3 Axe Z"
+  ALM_DEBRIDAGE   "Débridage"    ALM_COMM_PRESSE "D7 Profinet"
+  ALM_BRIDAGE     "Bridage"      ALM_ZONE        "D6 Zone"
+  ALM_PILON       "Pilon"        ALM_HOMING      "D5 Homing"
+  ALM_INTRO       "Intro"        DEFAUT_ACTIF    "Défaut général"
+
+  Chaque item : LED (18×18) + Text label 10pt blanc
+
+[ BOUTON ACQUITTER DEPUIS CET ÉCRAN ]
+  Rectangle   : (640,762,960,798)  Fill=#FF6600
+  Text        : "ACQUITTER TOUTES LES ALARMES"  Font=11pt Bold Blanc
+  Action      : Toggle GVL_HMI.HMI_BTN_ACQ
+
+[ INFO CYCLE ] (bas gauche)
+  Rectangle   : (10,760,630,798)  Fill=#1A1A2E
+  Text fixe   : "Cycle en cours : "  (20,765,180,795) Font=11pt blanc
+  LED         : (185,768,210,793)  → GVL_SEQ.CYCLE_EN_COURS  ON=#00FF41 OFF=#404040
+  Text fixe   : "  Étape G3 :"  (220,765,340,795) Font=11pt blanc
+  Text Field  : GVL_HMI.HMI_G3_ETAPE  (350,763,400,797) Font=14pt Bold #4A90D9
+  Text fixe   : "/ 15"  (405,768,450,795) Font=11pt #AAAAAA
+
+================================================================
+MODIFICATION PRG_MAIN
+================================================================
+Ajouter dans la section VAR de PLC_PRG :
+
+  instHMI  : FB_HMI_Controller;
+  instFault: FB_FaultInjector;
+
+Ajouter en début de PLC_PRG (AVANT les copies GVL_IO → GVL_SIG) :
+
+  // ── IHM : mise à jour textes, boutons, injection défauts ──────
+  instHMI();
+  instFault(
+      FaultID  := GVL_HMI.HMI_FAULT_SEL,
+      Inject   := GVL_HMI.HMI_BTN_INJECT,
+      ResetFlt := GVL_HMI.HMI_BTN_FAULT_RESET,
+      Desc     => GVL_HMI.HMI_FAULT_DESC,
+      Result   => GVL_HMI.HMI_FAULT_RESULT,
+      FltActive=> GVL_HMI.HMI_FAULT_ACTIVE
+  );
+
+Après les copies GVL_IO → GVL_SIG existantes, ajouter :
+
+  // ── Forcer OR zone libre : bouton physique OU bouton HMI ──────
+  GVL_SIG.ZONE_CONFIRMEE := GVL_IO.ZONE_LIBRE_BTN OR GVL_HMI.HMI_BTN_ZONE_OK;
+
+================================================================
+CONSEILS CODESYS VISUALIZATION
+================================================================
+
+COULEUR DYNAMIQUE D'UN RECTANGLE :
+  - Clic droit → Properties → Frame/Fill Color → Dynamic → Variable : GVL_HMI.HMI_COL_MODE
+  - Le type DWORD est interprété comme couleur ARGB (Alpha=FF toujours)
+
+LED (LAMP) :
+  - Tool Box → Lamp → poser, double-clic → Properties
+  - Variable : la variable BOOL à visualiser
+  - Color Normal OFF : RGB(64,64,64) = #404040
+  - Color Normal ON  : RGB(0,200,0) = #00C800
+  - Shape : Ellipse (aspect LED industriel)
+
+BAR DISPLAY (barre de progression) :
+  - Tool Box → Bar Display → poser
+  - Variable : GVL_HMI.HMI_G3_PCT (type REAL)
+  - Min=0.0  Max=100.0
+  - Direction : Left to Right
+
+COMBO BOX (liste déroulante) :
+  - Tool Box → Combo Box → poser
+  - Variable : INT (ex : GVL_HMI.HMI_SEL_MOULE)
+  - Text List : créer un objet Text List dans le projet
+    → Add Object → Text List → nommer "TL_Moules"
+    → Ajouter : 0="Choisir...", 1="MOULE_A", ..., 5="MOULE_E"
+
+BOUTON AVEC ACTION ST :
+  - Double-clic bouton → Properties → Input → Mouse Down
+  - Action : Execute ST expression
+  - Expression : GVL_HMI.HMI_BTN_CMD_CM := TRUE;
+
+CLIGNOTEMENT VOYANT D'URGENCE :
+  - Lamp → Properties → Toggle Visibility avec fréquence 500ms
+  - Ou utiliser VisToggle avec variable booléenne et timer dans le code ST
+
+TAILLE MINIMALE RECOMMANDÉE :
+  - Textes lisibles en démo : police 12pt minimum
+  - Boutons cliquables sur écran tactile : 120×45px minimum
+
+================================================================
+FIN DU GUIDE
+================================================================
