@@ -18,8 +18,8 @@ VAR_OUTPUT
 END_VAR
 
 // ── Corps du FB ──────────────────────────────────────────────────
-// Mise à jour ZONE_CONFIRMEE
-GVL_SIG.ZONE_CONFIRMEE := GVL_IO.ZONE_LIBRE_BTN AND NOT GVL_IO.CAPTEUR_ZONE_OCCUPEE;
+// ZONE_CONFIRMEE est gérée exclusivement par FB_LaserSafe (OSSD Sick S3000)
+// G1 surveille uniquement CAPTEUR_ZONE_OCCUPEE pour alarme immédiate
 
 CASE Step OF
 

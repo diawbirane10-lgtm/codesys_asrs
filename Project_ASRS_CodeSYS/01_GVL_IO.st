@@ -2,6 +2,10 @@
 // 01_GVL_IO.st  —  Signaux physiques I/O (GVL nommée "GVL_IO")
 // CODESYS V3.5 — Global Variable List
 // Sur SoftPLC : pas d'adresse matérielle — simulé via Visualization
+//
+// Modification v2 — Laser OSSD :
+//   ZONE_LIBRE_BTN supprimé → remplacé par OSSD_ZPM + OSSD_PRESSE
+//   (Sick S3000 SIL 2 / PLd ISO 13849 — sortie OSSD double canal)
 // ================================================================
 
 VAR_GLOBAL
@@ -42,8 +46,11 @@ VAR_GLOBAL
     CAPTEUR_ROT_NEUTRE : BOOL;
 
     // ── ENTRÉES SÉCURITÉ / ZONE ───────────────────────────────────
-    ZONE_LIBRE_BTN        : BOOL;
-    CAPTEUR_ZONE_OCCUPEE  : BOOL;
+    // OSSD : Output Signal Switching Device — Sick S3000 (SIL 2 / PLd)
+    // TRUE = zone libre (faisceau non interrompu), FALSE = présence détectée
+    OSSD_ZPM              : BOOL;   // Scanner laser zone ZPM P0 (au-dessus de la ZPM)
+    OSSD_PRESSE           : BOOL;   // Scanner laser zone presse QUADRA 10
+    CAPTEUR_ZONE_OCCUPEE  : BOOL;   // Détecteur de présence (sécurité complémentaire)
     CAPTEUR_CHARGE_CHARIOT: BOOL;
 
     // ── ENTRÉES RFID ──────────────────────────────────────────────

@@ -30,7 +30,7 @@ VAR_GLOBAL
     HMI_BTN_AU       : BOOL;   // Arrêt urgence SW
     HMI_BTN_CMD_CM   : BOOL;   // Démarrer changement moule
     HMI_BTN_ACQ      : BOOL;   // Acquitter défauts
-    HMI_BTN_ZONE_OK  : BOOL;   // Zone libre confirmée (opérateur)
+    HMI_BTN_ZONE_OK  : BOOL;   // DIAGNOSTIC ONLY — ne déclenche plus ZONE_CONFIRMEE (laser prime)
     HMI_BTN_PROLONG_NETTOYAGE : BOOL; // Prolongation unique nettoyage +5 min
 
     // ── Modes dégradés — sélection et injection ───────────────────

@@ -20,7 +20,7 @@ VAR_GLOBAL
     X_P5 : INT := 2500;
     X_P6 : INT := 3000;
 
-    // ── Timeouts ─────────────────────────────────────────────────
+    // ── Timeouts mouvements et presse ────────────────────────────
     T_ARRET_PRESSE : TIME := T#120S;
     T_DEBRIDAGE    : TIME := T#120S;
     T_BRIDAGE      : TIME := T#120S;
@@ -31,4 +31,10 @@ VAR_GLOBAL
     T_RFID         : TIME := T#120S;
     T_ROTATION     : TIME := T#120S;
     T_SATELLITE    : TIME := T#120S;
+
+    // ── Timeout laser OSSD — confirmation zone libre ──────────────
+    // Durée pendant laquelle les deux zones doivent rester libres
+    // (OSSD_ZPM=TRUE ET OSSD_PRESSE=TRUE) avant que ZONE_CONFIRMEE soit validée.
+    // Norme ISO 13849 / IEC 62061 — délai anti-rebond opérationnel.
+    T_ZONE_LIBRE_CONFIRM : TIME := T#10S;
 END_VAR

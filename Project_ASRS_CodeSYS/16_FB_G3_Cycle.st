@@ -323,6 +323,11 @@ CASE Step OF
     GVL_IO.VOYANT_NETTOYAGE_TIMEOUT := FALSE;
     GVL_IO.VOYANT_NETTOYAGE_MAX := FALSE;
     GVL_IO.BUZZER_ATTENTE_ZONE_LIBRE := FALSE;
+    // Réinitialise la validation laser pour forcer une nouvelle confirmation 10s
+    // sans ce reset, le 2ème cycle validerait immédiatement si ZONE_CONFIRMEE
+    // était encore TRUE depuis le cycle précédent
+    GVL_SIG.ZONE_CONFIRMEE    := FALSE;
+    GVL_SIG.OSSD_ZONE_LIBRE_AUTO := FALSE;
     Step     := 27;
 
 27: // ET#2

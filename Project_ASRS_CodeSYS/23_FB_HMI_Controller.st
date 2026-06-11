@@ -9,6 +9,10 @@
 //   - Gère le chronomètre cycle et la barre de progression G3
 //
 // Appel dans PRG_MAIN : avant le bloc de copies GVL_IO → GVL_SIG
+//
+// Modification v2 — Laser OSSD :
+//   - HMI_BTN_ZONE_OK supprimé du flux normal (ZONE_CONFIRMEE géré par FB_LaserSafe)
+//   - rZoneOk supprimé
 // ================================================================
 
 FUNCTION_BLOCK FB_HMI_Controller
@@ -17,7 +21,6 @@ VAR
     rHoming   : R_TRIG;
     rCmdCM    : R_TRIG;
     rAcq      : R_TRIG;
-    rZoneOk   : R_TRIG;
 
     // ── Chronomètre cycle ─────────────────────────────────────────
     tTick       : TON;
@@ -115,13 +118,9 @@ ELSE
     GVL_IO.CMD_ACQ_DEF := FALSE;
 END_IF;
 
-// ZONE LIBRE (écriture directe dans GVL_SIG car non mappé depuis GVL_IO)
-rZoneOk(CLK := GVL_HMI.HMI_BTN_ZONE_OK);
-IF rZoneOk.Q THEN
-    GVL_SIG.ZONE_CONFIRMEE := TRUE;
-ELSIF NOT GVL_SIG.VYT_NETTOYAGE THEN
-    GVL_SIG.ZONE_CONFIRMEE := FALSE;
-END_IF;
+// ZONE LIBRE : désormais pilotée automatiquement par FB_LaserSafe (OSSD Sick S3000)
+// HMI_BTN_ZONE_OK conservé dans GVL_HMI uniquement pour diagnostic Visualization
+// (ne déclenche plus ZONE_CONFIRMEE en production — laser prime)
 
 // ARRÊT URGENCE SW
 GVL_IO.AU_ACTIF := GVL_HMI.HMI_BTN_AU;

@@ -2,6 +2,10 @@
 // 18_PRG_MAIN.st  —  Programme principal cyclique (équivalent OB1)
 // CODESYS V3.5 — PROGRAM
 // Configurer en tâche cyclique (ex : 10ms) dans le Task Manager
+//
+// Modification v2 — Laser OSSD :
+//   - instLaser (FB_LaserSafe) ajouté : gère ZONE_CONFIRMEE automatiquement
+//   - Ligne ZONE_CONFIRMEE manuelle supprimée (bouton remplacé par laser)
 // ================================================================
 
 PROGRAM PLC_PRG
@@ -20,6 +24,8 @@ VAR
     // ── IHM Visualization ────────────────────────────────────
     instHMI   : FB_HMI_Controller;
     instFault : FB_FaultInjector;
+    // ── Sécurité laser OSSD (Sick S3000) ─────────────────────
+    instLaser : FB_LaserSafe;
 END_VAR
 
 // ── IHM : textes, couleurs, boutons, injection défauts ────────
@@ -42,7 +48,7 @@ GVL_SIG.OP_CMD_HOMING    := GVL_IO.CMD_HOMING_MANUEL;
 GVL_SIG.OP_AU            := GVL_IO.AU_ACTIF;
 GVL_SIG.OP_MOULE_DEMANDE := GVL_IO.MOULE_DEMANDE_HMI;
 GVL_SIG.OP_MODE_AUTO     := GVL_IO.MODE_AUTO;
-GVL_SIG.ZONE_CONFIRMEE   := GVL_IO.ZONE_LIBRE_BTN OR GVL_HMI.HMI_BTN_ZONE_OK;
+// ZONE_CONFIRMEE : géré par instLaser() ci-dessous — ne pas écrire ici
 GVL_SIG.OP_PROLONG_NETTOYAGE := GVL_IO.PROLONG_NETTOYAGE_BTN OR GVL_HMI.HMI_BTN_PROLONG_NETTOYAGE;
 
 // ── Images capteurs position X → GVL_SIG ─────────────────────
@@ -65,6 +71,10 @@ GVL_SIG.CAPTEUR_PRES_CH[4,1] := GVL_IO.CH4N1;
 GVL_SIG.CAPTEUR_PRES_CH[4,2] := GVL_IO.CH4N2;
 GVL_SIG.CAPTEUR_PRES_CH[5,1] := GVL_IO.CH5N1;
 GVL_SIG.CAPTEUR_PRES_CH[5,2] := GVL_IO.CH5N2;
+
+// ── Scanner laser OSSD — valide ZONE_CONFIRMEE automatiquement ─
+// Doit être appelé AVANT instG3 pour que ZONE_CONFIRMEE soit à jour
+instLaser();
 
 // ── Appels GRAFCETs (ordre d'exécution fixe) ──────────────────
 instG1();    // G1 Sécurité — EN PREMIER, toujours actif
